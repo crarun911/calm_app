@@ -28,29 +28,25 @@ class _MoodCheckInScreenState extends State<MoodCheckInScreen> {
     return Scaffold(
       backgroundColor: AppTheme.midnight,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Header ──────────────────────────────────────────────────
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppTheme.cardSurface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.divider),
-                      ),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded,
-                          color: AppTheme.textPrimary, size: 16),
-                    ),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardSurface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.divider),
                   ),
-                ],
+                  child: const Icon(Icons.arrow_back_ios_new_rounded,
+                      color: AppTheme.textPrimary, size: 16),
+                ),
               ),
 
               const SizedBox(height: 40),
@@ -133,7 +129,7 @@ class _MoodCheckInScreenState extends State<MoodCheckInScreen> {
                 }).toList(),
               ),
 
-              const Spacer(),
+              const SizedBox(height: 40),
 
               // ── Note field ───────────────────────────────────────────────
               if (_selected != null) ...[
@@ -158,6 +154,8 @@ class _MoodCheckInScreenState extends State<MoodCheckInScreen> {
                 ).animate().fadeIn(duration: 300.ms),
                 const SizedBox(height: 20),
               ],
+
+              const SizedBox(height: 20),
 
               // ── Save Button ──────────────────────────────────────────────
               SizedBox(
@@ -214,7 +212,7 @@ class _MoodCheckInScreenState extends State<MoodCheckInScreen> {
                 ),
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 24),
             ],
           ),
         ),

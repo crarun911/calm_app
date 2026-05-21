@@ -26,7 +26,6 @@ class HomeScreen extends StatelessWidget {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // ── App Bar ──────────────────────────────────────────────────────
           SliverToBoxAdapter(
             child: SafeArea(
               child: Padding(
@@ -37,20 +36,13 @@ class HomeScreen extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          _greeting(),
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
+                        Text(_greeting(), style: Theme.of(context).textTheme.bodyLarge),
                         const SizedBox(height: 2),
-                        Text(
-                          'Find your calm',
-                          style: Theme.of(context).textTheme.displayMedium,
-                        ),
+                        Text('Find your calm', style: Theme.of(context).textTheme.displayMedium),
                       ],
-                    ).animate().fadeIn(delay: 100.ms).slideY(begin: -0.1),
+                    ),
                     Row(
                       children: [
-                        // Streak badge
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
@@ -74,22 +66,21 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        CircleAvatar(
+                        const CircleAvatar(
                           radius: 20,
                           backgroundColor: AppTheme.cardSurface,
-                          child: const Text('✨', style: TextStyle(fontSize: 16)),
+                          child: Text('✨', style: TextStyle(fontSize: 16)),
                         ),
                       ],
-                    ).animate().fadeIn(delay: 200.ms),
+                    ),
                   ],
                 ),
               ),
             ),
           ),
 
-          SliverToBoxAdapter(child: const SizedBox(height: 28)),
+          const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
-          // ── Daily Calm Card ───────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -110,12 +101,11 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
-            ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.05),
+            ),
           ),
 
-          SliverToBoxAdapter(child: const SizedBox(height: 28)),
+          const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
-          // ── Quick Actions ─────────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -160,12 +150,11 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-            ).animate().fadeIn(delay: 400.ms),
+            ),
           ),
 
-          SliverToBoxAdapter(child: const SizedBox(height: 28)),
+          const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
-          // ── Your Stats ────────────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -197,19 +186,18 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-            ).animate().fadeIn(delay: 500.ms),
+            ),
           ),
 
-          SliverToBoxAdapter(child: const SizedBox(height: 28)),
+          const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
-          // ── Recommended ───────────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: const SectionHeader(title: 'Recommended'),
-            ).animate().fadeIn(delay: 600.ms),
+            ),
           ),
-          SliverToBoxAdapter(child: const SizedBox(height: 14)),
+          const SliverToBoxAdapter(child: SizedBox(height: 14)),
 
           SliverToBoxAdapter(
             child: SizedBox(
@@ -220,7 +208,8 @@ class HomeScreen extends StatelessWidget {
                 physics: const BouncingScrollPhysics(),
                 itemCount: meditationSessions.length,
                 itemBuilder: (ctx, i) => Padding(
-                  padding: EdgeInsets.only(right: i < meditationSessions.length - 1 ? 14 : 0),
+                  padding: EdgeInsets.only(
+                      right: i < meditationSessions.length - 1 ? 14 : 0),
                   child: GradientSessionCard(
                     session: meditationSessions[i],
                     onTap: () => Navigator.push(
@@ -232,7 +221,8 @@ class HomeScreen extends StatelessWidget {
                             Navigator.pop(context);
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const MoodCheckInScreen()),
+                              MaterialPageRoute(
+                                  builder: (_) => const MoodCheckInScreen()),
                             );
                           },
                         ),
@@ -240,7 +230,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-              ).animate().fadeIn(delay: 650.ms),
+              ),
             ),
           ),
 
@@ -251,7 +241,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// ── Daily Calm Hero Card ───────────────────────────────────────────────────────
+// ── Daily Calm Card ───────────────────────────────────────────────────────────
 
 class _DailyCalmCard extends StatelessWidget {
   final VoidCallback onTap;
@@ -262,7 +252,7 @@ class _DailyCalmCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 190,
+        // NO fixed height — let content size itself
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
@@ -281,7 +271,6 @@ class _DailyCalmCard extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // Decorative circles
             Positioned(
               right: -30,
               top: -30,
@@ -294,78 +283,65 @@ class _DailyCalmCard extends StatelessWidget {
                 ),
               ),
             ),
-            Positioned(
-              right: 30,
-              bottom: -40,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.sage.withOpacity(0.04),
-                ),
-              ),
-            ),
             Padding(
-              padding: const EdgeInsets.all(24),
+              // Reduced padding so content fits comfortably
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppTheme.sage.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppTheme.sage.withOpacity(0.4)),
-                        ),
-                        child: const Text(
-                          'TODAY\'S SESSION',
-                          style: TextStyle(
-                            color: AppTheme.sageLight,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.sage.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppTheme.sage.withOpacity(0.4)),
+                    ),
+                    child: const Text(
+                      "TODAY'S SESSION",
+                      style: TextStyle(
+                        color: AppTheme.sageLight,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
                       ),
-                    ],
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 10),
                   const Text(
                     'Daily Calm',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 28,
+                      fontSize: 24,
                       fontWeight: FontWeight.w300,
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   const Text(
                     'Morning mindfulness · 10 min',
-                    style: TextStyle(color: AppTheme.sageLight, fontSize: 13),
+                    style: TextStyle(color: AppTheme.sageLight, fontSize: 12),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Container(
-                        width: 48,
-                        height: 48,
+                        width: 40,
+                        height: 40,
                         decoration: BoxDecoration(
                           color: AppTheme.sage,
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(12),
                           boxShadow: AppTheme.glowSage,
                         ),
-                        child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
+                        child: const Icon(Icons.play_arrow_rounded,
+                            color: Colors.white, size: 24),
                       ),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 12),
                       const Text(
                         'Begin your practice',
                         style: TextStyle(
                           color: AppTheme.sageLight,
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -402,13 +378,14 @@ class _QuickAction extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: color.withOpacity(0.2)),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(emoji, style: const TextStyle(fontSize: 22)),
               const SizedBox(height: 6),

@@ -41,7 +41,6 @@ class ProfileScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                 child: Column(
                   children: [
-                    // Avatar
                     Stack(
                       children: [
                         Container(
@@ -89,7 +88,6 @@ class ProfileScreen extends StatelessWidget {
 
                     const SizedBox(height: 24),
 
-                    // Premium banner
                     GestureDetector(
                       onTap: () {},
                       child: Container(
@@ -247,35 +245,11 @@ class ProfileScreen extends StatelessWidget {
                 children: [
                   const SectionHeader(title: 'Settings'),
                   const SizedBox(height: 14),
-                  ...[
-                    ('🔔', 'Reminders'),
-                    ('🎵', 'Audio Quality'),
-                    ('🌙', 'Dark Mode'),
-                    ('🔒', 'Privacy'),
-                    ('💬', 'Help & Support'),
-                  ].asMap().entries.map((e) {
-                    final item = e.value;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.cardSurface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppTheme.divider),
-                      ),
-                      child: ListTile(
-                        leading: Text(item.$1, style: const TextStyle(fontSize: 20)),
-                        title: Text(
-                          item.$2,
-                          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15),
-                        ),
-                        trailing: const Icon(Icons.arrow_forward_ios_rounded,
-                            color: AppTheme.textMuted, size: 14),
-                        onTap: () {},
-                      ),
-                    ).animate(delay: Duration(milliseconds: 450 + e.key * 40))
-                        .fadeIn()
-                        .slideX(begin: 0.05);
-                  }),
+                  _SettingsTile(emoji: '🔔', label: 'Reminders', delay: 450),
+                  _SettingsTile(emoji: '🎵', label: 'Audio Quality', delay: 490),
+                  _SettingsTile(emoji: '🌙', label: 'Dark Mode', delay: 530),
+                  _SettingsTile(emoji: '🔒', label: 'Privacy', delay: 570),
+                  _SettingsTile(emoji: '💬', label: 'Help & Support', delay: 610),
                 ],
               ),
             ),
@@ -285,5 +259,54 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final int delay;
+
+  const _SettingsTile({
+    required this.emoji,
+    required this.label,
+    required this.delay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.cardSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.divider),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () {},
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 20)),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios_rounded,
+                    color: AppTheme.textMuted, size: 14),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ).animate(delay: Duration(milliseconds: delay)).fadeIn().slideX(begin: 0.05);
   }
 }
