@@ -17,6 +17,7 @@ class Session {
   final String gradient;
   final bool isFavorite;
   final String instructor;
+  final String audioPath;
 
   const Session({
     required this.id,
@@ -27,6 +28,7 @@ class Session {
     required this.gradient,
     this.isFavorite = false,
     required this.instructor,
+    required this.audioPath,
   });
 }
 
@@ -86,6 +88,7 @@ const dailyCalmSession = Session(
   durationMin: 10,
   gradient: 'sage',
   instructor: 'Sofia Arora',
+  audioPath: 'assets/audio/daily_calm.mp3',
 );
 
 const List<Session> meditationSessions = [
@@ -97,6 +100,7 @@ const List<Session> meditationSessions = [
     durationMin: 12,
     gradient: 'lavender',
     instructor: 'James Chen',
+    audioPath: 'assets/audio/releasing_anxiety.mp3',
   ),
   Session(
     id: 'med_2',
@@ -106,6 +110,7 @@ const List<Session> meditationSessions = [
     durationMin: 20,
     gradient: 'sage',
     instructor: 'Sofia Arora',
+    audioPath: 'assets/audio/body_scan.mp3',
   ),
   Session(
     id: 'med_3',
@@ -115,6 +120,7 @@ const List<Session> meditationSessions = [
     durationMin: 15,
     gradient: 'rose',
     instructor: 'Priya Nair',
+    audioPath: 'assets/audio/loving_kindness.mp3',
   ),
   Session(
     id: 'med_4',
@@ -124,6 +130,7 @@ const List<Session> meditationSessions = [
     durationMin: 10,
     gradient: 'gold',
     instructor: 'James Chen',
+    audioPath: 'assets/audio/focus_flow.mp3',
   ),
   Session(
     id: 'med_5',
@@ -133,6 +140,7 @@ const List<Session> meditationSessions = [
     durationMin: 18,
     gradient: 'lavender',
     instructor: 'Priya Nair',
+    audioPath: 'assets/audio/stress_relief.mp3',
   ),
 ];
 
@@ -145,6 +153,7 @@ const List<Session> sleepSessions = [
     durationMin: 30,
     gradient: 'sleep',
     instructor: 'Sofia Arora',
+    audioPath: 'assets/audio/forest_midnight.mp3',
   ),
   Session(
     id: 'sleep_2',
@@ -154,6 +163,7 @@ const List<Session> sleepSessions = [
     durationMin: 25,
     gradient: 'sleep',
     instructor: 'James Chen',
+    audioPath: 'assets/audio/ocean_drift.mp3',
   ),
   Session(
     id: 'sleep_3',
@@ -163,14 +173,15 @@ const List<Session> sleepSessions = [
     durationMin: 20,
     gradient: 'lavender',
     instructor: 'Priya Nair',
+    audioPath: 'assets/audio/deep_sleep.mp3',
   ),
 ];
 
 const List<Map<String, dynamic>> ambientSounds = [
-  {'id': 'rain', 'name': 'Rain', 'emoji': '🌧️'},
-  {'id': 'ocean', 'name': 'Ocean', 'emoji': '🌊'},
-  {'id': 'forest', 'name': 'Forest', 'emoji': '🌲'},
-  {'id': 'fire', 'name': 'Fireplace', 'emoji': '🔥'},
-  {'id': 'cafe', 'name': 'Café', 'emoji': '☕'},
-  {'id': 'wind', 'name': 'Wind', 'emoji': '💨'},
+  {'id': 'rain', 'name': 'Rain', 'emoji': '🌧️', 'audioPath': 'assets/audio/ambient_rain.mp3'},
+  {'id': 'ocean', 'name': 'Ocean', 'emoji': '🌊', 'audioPath': 'assets/audio/ambient_ocean.mp3'},
+  {'id': 'forest', 'name': 'Forest', 'emoji': '🌲', 'audioPath': 'assets/audio/ambient_forest.mp3'},
+  {'id': 'fire', 'name': 'Fireplace', 'emoji': '🔥', 'audioPath': 'assets/audio/ambient_fire.mp3'},
+  {'id': 'cafe', 'name': 'Café', 'emoji': '☕', 'audioPath': 'assets/audio/ambient_cafe.mp3'},
+  {'id': 'wind', 'name': 'Wind', 'emoji': '💨', 'audioPath': 'assets/audio/ambient_wind.mp3'},
 ];
