@@ -32,7 +32,7 @@ class CalmApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => AppState(),
       child: MaterialApp(
-        title: 'Calm',
+        title: 'Tranqlo',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
         home: const MainShell(),
