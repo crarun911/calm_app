@@ -4,9 +4,28 @@ import '../theme/app_theme.dart';
 import '../models/app_state.dart';
 import '../widgets/common_widgets.dart';
 import 'audio_player_screen.dart';
+import 'mood_checkin_screen.dart';
 
 class SleepScreen extends StatelessWidget {
   const SleepScreen({super.key});
+
+  void _openPlayer(BuildContext context, Session session) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AudioPlayerScreen(
+          session: session,
+          onComplete: () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MoodCheckInScreen()),
+            );
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +86,8 @@ class SleepScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Text('Sleep', style: Theme.of(context).textTheme.headlineLarge),
+                        Text('Sleep',
+                            style: Theme.of(context).textTheme.headlineLarge),
                       ],
                     ),
                   ),
@@ -76,7 +96,7 @@ class SleepScreen extends StatelessWidget {
 
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
-              // ── Moon visual ─────────────────────────────────────────────
+              // ── Moon visual ──────────────────────────────────────────
               SliverToBoxAdapter(
                 child: Center(
                   child: Container(
@@ -103,13 +123,16 @@ class SleepScreen extends StatelessWidget {
                     child: const Center(
                       child: Text('🌙', style: TextStyle(fontSize: 42)),
                     ),
-                  ).animate().fadeIn(delay: 200.ms).scale(begin: const Offset(0.7, 0.7)),
+                  )
+                      .animate()
+                      .fadeIn(delay: 200.ms)
+                      .scale(begin: const Offset(0.7, 0.7)),
                 ),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
-              // ── Sleep Stories ────────────────────────────────────────────
+              // ── Sleep Stories ────────────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -127,20 +150,19 @@ class SleepScreen extends StatelessWidget {
                       child: GradientSessionCard(
                         session: s,
                         large: true,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AudioPlayerScreen(session: s),
-                          ),
-                        ),
-                      ).animate(delay: Duration(milliseconds: 350 + i * 80)).fadeIn().slideY(begin: 0.05),
+                        onTap: () => _openPlayer(context, s),
+                      )
+                          .animate(
+                              delay: Duration(milliseconds: 350 + i * 80))
+                          .fadeIn()
+                          .slideY(begin: 0.05),
                     );
                   },
                   childCount: sleepSessions.length,
                 ),
               ),
 
-              // ── Ambient Sounds ────────────────────────────────────────────
+              // ── Ambient Sounds ───────────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
@@ -155,7 +177,8 @@ class SleepScreen extends StatelessWidget {
                   child: GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
                       childAspectRatio: 1,
                       crossAxisSpacing: 12,
@@ -164,10 +187,27 @@ class SleepScreen extends StatelessWidget {
                     itemCount: ambientSounds.length,
                     itemBuilder: (_, i) {
                       final sound = ambientSounds[i];
+                      // Build a proper Session for each ambient sound
+                      final session = Session(
+                        id: sound['id'] as String,
+                        title: sound['name'] as String,
+                        subtitle: 'Ambient sound',
+                        category: 'Ambient',
+                        durationMin: 60,
+                        gradient: 'sleep',
+                        instructor: 'Calm',
+                        audioPath: sound['audioPath'] as String,
+                      );
                       return _AmbientTile(
                         name: sound['name'] as String,
                         emoji: sound['emoji'] as String,
-                      ).animate(delay: Duration(milliseconds: 550 + i * 60)).fadeIn().scale(begin: const Offset(0.8, 0.8));
+                        onTap: () => _openPlayer(context, session),
+                      )
+                          .animate(
+                              delay: Duration(
+                                  milliseconds: 550 + i * 60))
+                          .fadeIn()
+                          .scale(begin: const Offset(0.8, 0.8));
                     },
                   ),
                 ),
@@ -182,57 +222,42 @@ class SleepScreen extends StatelessWidget {
   }
 }
 
-class _AmbientTile extends StatefulWidget {
+// ── Ambient Tile ──────────────────────────────────────────────────────────────
+
+class _AmbientTile extends StatelessWidget {
   final String name;
   final String emoji;
-  const _AmbientTile({required this.name, required this.emoji});
+  final VoidCallback onTap;
 
-  @override
-  State<_AmbientTile> createState() => _AmbientTileState();
-}
-
-class _AmbientTileState extends State<_AmbientTile> {
-  bool _active = false;
+  const _AmbientTile({
+    required this.name,
+    required this.emoji,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => setState(() => _active = !_active),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      onTap: onTap,
+      child: Container(
         decoration: BoxDecoration(
-          color: _active ? AppTheme.lavender.withOpacity(0.2) : AppTheme.cardSurface,
+          color: AppTheme.cardSurface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _active ? AppTheme.lavender.withOpacity(0.5) : AppTheme.divider,
-          ),
-          boxShadow: _active
-              ? [
-                  BoxShadow(
-                    color: AppTheme.lavender.withOpacity(0.2),
-                    blurRadius: 12,
-                  )
-                ]
-              : null,
+          border: Border.all(color: AppTheme.divider),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(widget.emoji, style: const TextStyle(fontSize: 28)),
+            Text(emoji, style: const TextStyle(fontSize: 28)),
             const SizedBox(height: 6),
             Text(
-              widget.name,
-              style: TextStyle(
-                color: _active ? AppTheme.lavenderLight : AppTheme.textSecondary,
+              name,
+              style: const TextStyle(
+                color: AppTheme.textSecondary,
                 fontSize: 11,
-                fontWeight: _active ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: FontWeight.w400,
               ),
             ),
-            if (_active)
-              const Padding(
-                padding: EdgeInsets.only(top: 4),
-                child: Icon(Icons.music_note_rounded, color: AppTheme.lavender, size: 12),
-              ),
           ],
         ),
       ),
