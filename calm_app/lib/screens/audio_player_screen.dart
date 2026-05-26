@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_theme.dart';
 import '../models/app_state.dart';
 
@@ -25,10 +25,17 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
   late AnimationController _pulseController;
   late AnimationController _rotateController;
   late AudioPlayer _audioPlayer;
+
   bool _isPlaying = false;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
+
+  // Sleep timer — stored as a target audio position
+  // e.g. if user sets 15min timer at position 5:00, target = 5:00 + 15:00 = 20:00
+  Duration? _sleepTargetPosition;
+  Duration? _sleepStartPosition;  // where timer was set
   int? _sleepTimerMin;
+  bool _isFading = false;
 
   @override
   void initState() {
@@ -52,39 +59,114 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
     try {
       await _audioPlayer.setAsset(widget.session.audioPath);
 
-      // Listen to duration
       _audioPlayer.durationStream.listen((d) {
-        if (d != null && mounted) {
-          setState(() => _duration = d);
-        }
+        if (d != null && mounted) setState(() => _duration = d);
       });
 
-      // Listen to position
-      _audioPlayer.positionStream.listen((p) {
-        if (mounted) {
-          setState(() => _position = p);
-        }
-      });
+      // Position stream drives EVERYTHING including sleep timer
+      _audioPlayer.positionStream.listen((pos) {
+        if (!mounted) return;
+        setState(() => _position = pos);
 
-      // Listen to player state
-      _audioPlayer.playerStateStream.listen((state) {
-        if (mounted) {
-          setState(() => _isPlaying = state.playing);
-          if (state.playing) {
-            _rotateController.repeat();
+        // Check sleep timer against audio position
+        if (_sleepTargetPosition != null) {
+          final remaining = _sleepTargetPosition! - pos;
+          final remainingSec = remaining.inSeconds;
+
+          if (remainingSec <= 0) {
+            // Time's up
+            _audioPlayer.setVolume(1.0);
+            _audioPlayer.pause();
+            _clearSleepTimer();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Sleep timer ended 😴'),
+                  backgroundColor: AppTheme.cardSurface,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+            }
+          } else if (remainingSec <= 30) {
+            // Fade over last 30 seconds
+            setState(() => _isFading = true);
+            final volume = (remainingSec / 30.0).clamp(0.0, 1.0);
+            _audioPlayer.setVolume(volume);
           } else {
-            _rotateController.stop();
+            // Normal - ensure full volume
+            if (_isFading) {
+              setState(() => _isFading = false);
+              _audioPlayer.setVolume(1.0);
+            }
           }
-          // Auto complete when track ends
-          if (state.processingState == ProcessingState.completed) {
-            _onSessionComplete();
-          }
+        }
+      });
+
+      _audioPlayer.playerStateStream.listen((state) {
+        if (!mounted) return;
+        setState(() => _isPlaying = state.playing);
+        if (state.playing) {
+          _rotateController.repeat();
+        } else {
+          _rotateController.stop();
+        }
+        if (state.processingState == ProcessingState.completed) {
+          _onSessionComplete();
         }
       });
     } catch (e) {
       debugPrint('Audio init error: $e');
     }
   }
+
+  // ── Sleep Timer ────────────────────────────────────────────────────────────
+
+  void _setSleepTimer(int? minutes) {
+    if (minutes == null) {
+      _clearSleepTimer();
+      _audioPlayer.setVolume(1.0);
+      return;
+    }
+
+    // Target = current audio position + chosen minutes
+    final target = _position + Duration(minutes: minutes);
+    setState(() {
+      _sleepTimerMin = minutes;
+      _sleepTargetPosition = target;
+      _sleepStartPosition = _position; // remember where timer started
+      _isFading = false;
+    });
+    _audioPlayer.setVolume(1.0);
+  }
+
+  void _clearSleepTimer() {
+    if (mounted) {
+      setState(() {
+        _sleepTimerMin = null;
+        _sleepTargetPosition = null;
+        _sleepStartPosition = null;
+        _isFading = false;
+      });
+    }
+  }
+
+
+  // Remaining seconds based on audio position vs target
+  int get _remainingSec {
+    if (_sleepTargetPosition == null) return 0;
+    final diff = _sleepTargetPosition! - _position;
+    return diff.inSeconds.clamp(0, 999999);
+  }
+
+  String _formatCountdown(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  // ── Audio Controls ─────────────────────────────────────────────────────────
 
   void _togglePlay() async {
     if (_isPlaying) {
@@ -96,10 +178,21 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
 
   void _seekRelative(int seconds) async {
     final newPos = _position + Duration(seconds: seconds);
-    await _audioPlayer.seek(newPos.isNegative ? Duration.zero : newPos);
+    final clamped = newPos.isNegative ? Duration.zero : newPos;
+    await _audioPlayer.seek(clamped);
+    if (_sleepTargetPosition != null) {
+      // Cancel if jumped before start position or past target
+      if (clamped >= _sleepTargetPosition! ||
+          (_sleepStartPosition != null && clamped < _sleepStartPosition!)) {
+        _clearSleepTimer();
+        _audioPlayer.setVolume(1.0);
+      }
+    }
   }
 
   void _onSessionComplete() {
+    _clearSleepTimer();
+    _audioPlayer.setVolume(1.0);
     context.read<AppState>().completeSession();
     widget.onComplete?.call();
   }
@@ -113,13 +206,9 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
       ),
       builder: (_) => _SleepTimerModal(
         selected: _sleepTimerMin,
-        onSelect: (min) async {
-          setState(() => _sleepTimerMin = min);
+        onSelect: (min) {
           Navigator.pop(context);
-          if (min != null) {
-            await Future.delayed(Duration(minutes: min));
-            if (mounted) await _audioPlayer.pause();
-          }
+          _setSleepTimer(min);
         },
       ),
     );
@@ -127,7 +216,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
 
   double get _progress {
     if (_duration.inMilliseconds == 0) return 0;
-    return _position.inMilliseconds / _duration.inMilliseconds;
+    return (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0);
   }
 
   String _formatDuration(Duration d) {
@@ -150,7 +239,8 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
       case 'gold': return AppTheme.goldGradient;
       case 'rose': return AppTheme.roseGradient;
       case 'sleep': return AppTheme.sleepGradient;
-      default: return const LinearGradient(colors: [AppTheme.lavender, Color(0xFF6B5CA5)]);
+      default: return const LinearGradient(
+          colors: [AppTheme.lavender, Color(0xFF6B5CA5)]);
     }
   }
 
@@ -166,304 +256,304 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
   @override
   Widget build(BuildContext context) {
     final accent = _accentColor();
+    final remaining = _remainingSec;
 
     return Scaffold(
       backgroundColor: AppTheme.midnight,
-      body: Stack(
-        children: [
-          Positioned(
-            top: -80, left: -80,
-            child: Container(
-              width: 300, height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: accent.withOpacity(0.07),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 100, right: -60,
-            child: Container(
-              width: 200, height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: accent.withOpacity(0.05),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                // ── Top Bar ──────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                            color: AppTheme.textPrimary, size: 30),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      Text(
-                        widget.session.category.toUpperCase(),
-                        style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 11,
-                          letterSpacing: 2,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.more_horiz_rounded,
-                            color: AppTheme.textPrimary, size: 26),
-                        onPressed: () {},
-                      ),
-                    ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Top Bar ────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.textPrimary, size: 30),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // ── Animated Artwork ──────────────────────────────────
-                Expanded(
-                  child: Center(
-                    child: AnimatedBuilder(
-                      animation: _pulseController,
-                      builder: (_, __) {
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            ...[140.0, 120.0, 100.0].asMap().entries.map((e) {
-                              final delay = e.key * 0.3;
-                              final val = (_pulseController.value + delay) % 1.0;
-                              return Container(
-                                width: e.value + val * 40,
-                                height: e.value + val * 40,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: accent.withOpacity(0.08 + (1 - val) * 0.05),
-                                    width: 1,
-                                  ),
-                                ),
-                              );
-                            }),
-                            AnimatedBuilder(
-                              animation: _rotateController,
-                              builder: (_, child) => Transform.rotate(
-                                angle: _rotateController.value * 2 * math.pi,
-                                child: child,
-                              ),
-                              child: Container(
-                                width: 220, height: 220,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: _sessionGradient(),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: accent.withOpacity(0.3),
-                                      blurRadius: 40,
-                                      spreadRadius: 10,
-                                    ),
-                                  ],
-                                ),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    ...List.generate(6, (i) {
-                                      final angle = i * math.pi / 3;
-                                      return Positioned(
-                                        left: 110 + math.cos(angle) * 60,
-                                        top: 110 + math.sin(angle) * 60,
-                                        child: Container(
-                                          width: 30, height: 30,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: Colors.white.withOpacity(0.05),
-                                          ),
-                                        ),
-                                      );
-                                    }),
-                                    Container(
-                                      width: 60, height: 60,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: AppTheme.midnight.withOpacity(0.8),
-                                      ),
-                                      child: Icon(
-                                        Icons.self_improvement_rounded,
-                                        color: accent, size: 28,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
+                  Text(
+                    widget.session.category.toUpperCase(),
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 11,
+                      letterSpacing: 2,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
+                  IconButton(
+                    icon: const Icon(Icons.more_horiz_rounded,
+                        color: AppTheme.textPrimary, size: 26),
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+            ),
 
-                // ── Session Info ──────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Column(
-                    children: [
-                      Text(widget.session.title,
-                          style: Theme.of(context).textTheme.displayMedium,
-                          textAlign: TextAlign.center),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${widget.session.instructor} · ${widget.session.durationMin} min',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ],
+            // ── Sleep Timer Banner ─────────────────────────────────────
+            if (_sleepTargetPosition != null)
+              Container(
+                margin: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _isFading
+                      ? AppTheme.rose.withOpacity(0.15)
+                      : AppTheme.lavender.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: _isFading
+                        ? AppTheme.rose.withOpacity(0.4)
+                        : AppTheme.lavender.withOpacity(0.3),
                   ),
                 ),
-
-                const SizedBox(height: 32),
-
-                // ── Progress Slider ───────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Column(
-                    children: [
-                      SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          thumbColor: accent,
-                          activeTrackColor: accent,
-                          inactiveTrackColor: AppTheme.divider,
-                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                          trackHeight: 3,
-                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-                        ),
-                        child: Slider(
-                          value: _progress.clamp(0.0, 1.0),
-                          onChanged: (v) async {
-                            final pos = Duration(
-                              milliseconds: (v * _duration.inMilliseconds).round(),
-                            );
-                            await _audioPlayer.seek(pos);
-                          },
-                        ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _isFading
+                          ? Icons.volume_down_rounded
+                          : Icons.bedtime_rounded,
+                      color: _isFading ? AppTheme.rose : AppTheme.lavenderLight,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _isFading
+                          ? 'Fading... ${_formatCountdown(remaining)}'
+                          : 'Sleep timer: ${_formatCountdown(remaining)}',
+                      style: TextStyle(
+                        color: _isFading ? AppTheme.rose : AppTheme.lavenderLight,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(_formatDuration(_position),
-                                style: const TextStyle(
-                                    color: AppTheme.textSecondary, fontSize: 12)),
-                            Text(_formatDuration(_duration),
-                                style: const TextStyle(
-                                    color: AppTheme.textSecondary, fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        _clearSleepTimer();
+                        _audioPlayer.setVolume(1.0);
+                      },
+                      child: Icon(Icons.close_rounded,
+                          color: _isFading ? AppTheme.rose : AppTheme.lavenderLight,
+                          size: 14),
+                    ),
+                  ],
                 ),
+              ),
 
-                const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
-                // ── Controls ──────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+            // ── Artwork ────────────────────────────────────────────────
+            Expanded(
+              child: Center(
+                child: AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (_, __) => Stack(
+                    alignment: Alignment.center,
                     children: [
-                      // Sleep timer
-                      GestureDetector(
-                        onTap: _showSleepTimerModal,
-                        child: Column(
-                          children: [
-                            Icon(Icons.bedtime_outlined,
-                                color: _sleepTimerMin != null
-                                    ? accent
-                                    : AppTheme.textSecondary,
-                                size: 26),
-                            const SizedBox(height: 4),
-                            Text(
-                              _sleepTimerMin != null
-                                  ? '$_sleepTimerMin min'
-                                  : 'Timer',
-                              style: TextStyle(
-                                color: _sleepTimerMin != null
-                                    ? accent
-                                    : AppTheme.textSecondary,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Rewind 10s
-                      IconButton(
-                        icon: const Icon(Icons.replay_10_rounded,
-                            color: AppTheme.textPrimary, size: 30),
-                        onPressed: () => _seekRelative(-10),
-                      ),
-                      // Play/Pause
-                      GestureDetector(
-                        onTap: _togglePlay,
-                        child: Container(
-                          width: 72, height: 72,
+                      ...[140.0, 120.0, 100.0].asMap().entries.map((e) {
+                        final val = (_pulseController.value + e.key * 0.3) % 1.0;
+                        return Container(
+                          width: e.value + val * 40,
+                          height: e.value + val * 40,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [accent, accent.withOpacity(0.7)],
+                            border: Border.all(
+                              color: accent.withOpacity(0.08 + (1 - val) * 0.05),
+                              width: 1,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: accent.withOpacity(0.4),
-                                blurRadius: 20,
-                                spreadRadius: 4,
+                          ),
+                        );
+                      }),
+                      AnimatedBuilder(
+                        animation: _rotateController,
+                        builder: (_, child) => Transform.rotate(
+                          angle: _rotateController.value * 2 * math.pi,
+                          child: child,
+                        ),
+                        child: Container(
+                          width: 220, height: 220,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: _sessionGradient(),
+                            boxShadow: [BoxShadow(
+                              color: accent.withOpacity(0.3),
+                              blurRadius: 40, spreadRadius: 10,
+                            )],
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              ...List.generate(6, (i) {
+                                final angle = i * math.pi / 3;
+                                return Positioned(
+                                  left: 110 + math.cos(angle) * 60,
+                                  top: 110 + math.sin(angle) * 60,
+                                  child: Container(
+                                    width: 30, height: 30,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white.withOpacity(0.05),
+                                    ),
+                                  ),
+                                );
+                              }),
+                              Container(
+                                width: 60, height: 60,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppTheme.midnight.withOpacity(0.8),
+                                ),
+                                child: Icon(Icons.self_improvement_rounded,
+                                    color: accent, size: 28),
                               ),
                             ],
                           ),
-                          child: Icon(
-                            _isPlaying
-                                ? Icons.pause_rounded
-                                : Icons.play_arrow_rounded,
-                            color: Colors.white,
-                            size: 38,
-                          ),
-                        ),
-                      ),
-                      // Forward 10s
-                      IconButton(
-                        icon: const Icon(Icons.forward_10_rounded,
-                            color: AppTheme.textPrimary, size: 30),
-                        onPressed: () => _seekRelative(10),
-                      ),
-                      // Complete session
-                      GestureDetector(
-                        onTap: _onSessionComplete,
-                        child: const Column(
-                          children: [
-                            Icon(Icons.check_circle_outline_rounded,
-                                color: AppTheme.sage, size: 26),
-                            SizedBox(height: 4),
-                            Text('Done',
-                                style: TextStyle(
-                                    color: AppTheme.sage, fontSize: 10)),
-                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 32),
-              ],
+              ),
             ),
-          ),
-        ],
+
+            // ── Info ───────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                children: [
+                  Text(widget.session.title,
+                      style: Theme.of(context).textTheme.displayMedium,
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 6),
+                  Text('${widget.session.instructor} · ${widget.session.durationMin} min',
+                      style: Theme.of(context).textTheme.bodyLarge),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // ── Slider ─────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                children: [
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      thumbColor: accent,
+                      activeTrackColor: accent,
+                      inactiveTrackColor: AppTheme.divider,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                      trackHeight: 3,
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                    ),
+                    child: Slider(
+                      value: _progress,
+                      onChanged: (v) async {
+                        final pos = Duration(
+                            milliseconds: (v * _duration.inMilliseconds).round());
+                        await _audioPlayer.seek(pos);
+                        if (_sleepTargetPosition != null) {
+                          // Cancel if dragged past target (forward)
+                          // OR dragged before where timer started (backward)
+                          if (pos >= _sleepTargetPosition! || 
+                              (_sleepStartPosition != null && pos < _sleepStartPosition!)) {
+                            _clearSleepTimer();
+                            _audioPlayer.setVolume(1.0);
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(_formatDuration(_position),
+                            style: const TextStyle(
+                                color: AppTheme.textSecondary, fontSize: 12)),
+                        Text(_formatDuration(_duration),
+                            style: const TextStyle(
+                                color: AppTheme.textSecondary, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // ── Controls ───────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  GestureDetector(
+                    onTap: _showSleepTimerModal,
+                    child: Column(children: [
+                      Icon(Icons.bedtime_outlined,
+                          color: _sleepTargetPosition != null
+                              ? AppTheme.lavender : AppTheme.textSecondary,
+                          size: 26),
+                      const SizedBox(height: 4),
+                      Text(_sleepTimerMin != null ? '$_sleepTimerMin min' : 'Timer',
+                          style: TextStyle(
+                              color: _sleepTargetPosition != null
+                                  ? AppTheme.lavender : AppTheme.textSecondary,
+                              fontSize: 10)),
+                    ]),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.replay_10_rounded,
+                        color: AppTheme.textPrimary, size: 30),
+                    onPressed: () => _seekRelative(-10),
+                  ),
+                  GestureDetector(
+                    onTap: _togglePlay,
+                    child: Container(
+                      width: 72, height: 72,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                            colors: [accent, accent.withOpacity(0.7)]),
+                        boxShadow: [BoxShadow(
+                            color: accent.withOpacity(0.4),
+                            blurRadius: 20, spreadRadius: 4)],
+                      ),
+                      child: Icon(
+                        _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                        color: Colors.white, size: 38,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.forward_10_rounded,
+                        color: AppTheme.textPrimary, size: 30),
+                    onPressed: () => _seekRelative(10),
+                  ),
+                  GestureDetector(
+                    onTap: _onSessionComplete,
+                    child: const Column(children: [
+                      Icon(Icons.check_circle_outline_rounded,
+                          color: AppTheme.sage, size: 26),
+                      SizedBox(height: 4),
+                      Text('Done', style: TextStyle(color: AppTheme.sage, fontSize: 10)),
+                    ]),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 32),
+          ],
+        ),
       ),
     );
   }
@@ -474,7 +564,6 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
 class _SleepTimerModal extends StatelessWidget {
   final int? selected;
   final ValueChanged<int?> onSelect;
-
   const _SleepTimerModal({required this.selected, required this.onSelect});
 
   @override
@@ -485,23 +574,18 @@ class _SleepTimerModal extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(
+          Center(child: Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(
                 color: AppTheme.divider,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
+                borderRadius: BorderRadius.circular(2)),
+          )),
           const SizedBox(height: 20),
           const Text('Sleep Timer',
-              style: TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          const Text('Audio will fade out after the selected time',
+              style: TextStyle(color: AppTheme.textPrimary,
+                  fontSize: 20, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          const Text('Fades out over last 30 seconds of audio',
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
           const SizedBox(height: 20),
           ...([15, 30, 45, 60, null]).map((min) {
@@ -517,24 +601,18 @@ class _SleepTimerModal extends StatelessWidget {
                       : AppTheme.cardSurface,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isSelected
-                        ? AppTheme.lavender.withOpacity(0.5)
-                        : AppTheme.divider,
-                  ),
+                      color: isSelected
+                          ? AppTheme.lavender.withOpacity(0.5)
+                          : AppTheme.divider),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      min == null ? 'Off' : '$min minutes',
-                      style: TextStyle(
-                        color: isSelected
-                            ? AppTheme.lavenderLight
-                            : AppTheme.textPrimary,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 15,
-                      ),
-                    ),
+                    Text(min == null ? '🔕  Off' : '🌙  $min minutes',
+                        style: TextStyle(
+                            color: isSelected
+                                ? AppTheme.lavenderLight : AppTheme.textPrimary,
+                            fontWeight: FontWeight.w500, fontSize: 15)),
                     if (isSelected)
                       const Icon(Icons.check_rounded,
                           color: AppTheme.lavenderLight, size: 18),
