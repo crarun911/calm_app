@@ -33,6 +33,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
   // Sleep timer — stored as a target audio position
   // e.g. if user sets 15min timer at position 5:00, target = 5:00 + 15:00 = 20:00
   Duration? _sleepTargetPosition;
+  Duration? _sleepStartPosition;  // where timer was set
   int? _sleepTimerMin;
   bool _isFading = false;
 
@@ -134,6 +135,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
     setState(() {
       _sleepTimerMin = minutes;
       _sleepTargetPosition = target;
+      _sleepStartPosition = _position; // remember where timer started
       _isFading = false;
     });
     _audioPlayer.setVolume(1.0);
@@ -144,10 +146,12 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
       setState(() {
         _sleepTimerMin = null;
         _sleepTargetPosition = null;
+        _sleepStartPosition = null;
         _isFading = false;
       });
     }
   }
+
 
   // Remaining seconds based on audio position vs target
   int get _remainingSec {
@@ -176,9 +180,14 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
     final newPos = _position + Duration(seconds: seconds);
     final clamped = newPos.isNegative ? Duration.zero : newPos;
     await _audioPlayer.seek(clamped);
-    // Sleep target stays fixed — remaining countdown updates automatically
-    // because _remainingSec = _sleepTargetPosition - _position
-    // and _position updates from positionStream after seek
+    if (_sleepTargetPosition != null) {
+      // Cancel if jumped before start position or past target
+      if (clamped >= _sleepTargetPosition! ||
+          (_sleepStartPosition != null && clamped < _sleepStartPosition!)) {
+        _clearSleepTimer();
+        _audioPlayer.setVolume(1.0);
+      }
+    }
   }
 
   void _onSessionComplete() {
@@ -448,6 +457,15 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
                         final pos = Duration(
                             milliseconds: (v * _duration.inMilliseconds).round());
                         await _audioPlayer.seek(pos);
+                        if (_sleepTargetPosition != null) {
+                          // Cancel if dragged past target (forward)
+                          // OR dragged before where timer started (backward)
+                          if (pos >= _sleepTargetPosition! || 
+                              (_sleepStartPosition != null && pos < _sleepStartPosition!)) {
+                            _clearSleepTimer();
+                            _audioPlayer.setVolume(1.0);
+                          }
+                        }
                       },
                     ),
                   ),
