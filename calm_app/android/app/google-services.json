@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "480797521658",
+    "project_id": "tranqlo-15c91",
+    "storage_bucket": "tranqlo-15c91.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:480797521658:android:b863287a47f251e5c37b43",
+        "android_client_info": {
+          "package_name": "me.tranqlo.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrWFa_l43cTF4sLY6nclJB3afdIHwBS7k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

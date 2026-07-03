@@ -1,33 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 import '../models/app_state.dart';
 import '../widgets/common_widgets.dart';
+import '../services/auth_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   String _moodEmoji(MoodType? mood) {
     switch (mood) {
-      case MoodType.great:
-        return '😁';
-      case MoodType.good:
-        return '🙂';
-      case MoodType.okay:
-        return '😐';
-      case MoodType.sad:
-        return '😔';
-      case MoodType.stressed:
-        return '😣';
-      default:
-        return '—';
+      case MoodType.great: return '😁';
+      case MoodType.good: return '🙂';
+      case MoodType.okay: return '😐';
+      case MoodType.sad: return '😔';
+      case MoodType.stressed: return '😣';
+      default: return '—';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final user = FirebaseAuth.instance.currentUser;
+    final name = user?.displayName ?? 'Meditator';
+    final email = user?.email ?? '';
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '✨';
 
     return Scaffold(
       backgroundColor: AppTheme.midnight,
@@ -41,6 +41,7 @@ class ProfileScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                 child: Column(
                   children: [
+                    // Avatar with initial
                     Stack(
                       children: [
                         Container(
@@ -51,8 +52,15 @@ class ProfileScreen extends StatelessWidget {
                             gradient: AppTheme.sageGradient,
                             boxShadow: AppTheme.glowSage,
                           ),
-                          child: const Center(
-                            child: Text('✨', style: TextStyle(fontSize: 36)),
+                          child: Center(
+                            child: Text(
+                              initial,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 36,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
                         Positioned(
@@ -64,30 +72,37 @@ class ProfileScreen extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppTheme.gold,
                               shape: BoxShape.circle,
-                              border: Border.all(color: AppTheme.midnight, width: 2),
+                              border: Border.all(
+                                  color: AppTheme.midnight, width: 2),
                             ),
-                            child: const Icon(Icons.edit_rounded, color: Colors.white, size: 14),
+                            child: const Icon(Icons.edit_rounded,
+                                color: Colors.white, size: 14),
                           ),
                         ),
                       ],
-                    ).animate().fadeIn(delay: 100.ms).scale(begin: const Offset(0.8, 0.8)),
+                    ).animate().fadeIn(delay: 100.ms)
+                        .scale(begin: const Offset(0.8, 0.8)),
 
                     const SizedBox(height: 16),
 
+                    // Name from Firebase
                     Text(
-                      'Alex Meridian',
+                      name,
                       style: Theme.of(context).textTheme.headlineLarge,
                     ).animate().fadeIn(delay: 200.ms),
 
                     const SizedBox(height: 4),
 
-                    const Text(
-                      'Meditating since January 2024',
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                    // Email from Firebase
+                    Text(
+                      email,
+                      style: const TextStyle(
+                          color: AppTheme.textSecondary, fontSize: 13),
                     ).animate().fadeIn(delay: 250.ms),
 
                     const SizedBox(height: 24),
 
+                    // Premium banner
                     GestureDetector(
                       onTap: () {},
                       child: Container(
@@ -100,24 +115,22 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.star_rounded, color: Colors.white, size: 24),
+                            const Icon(Icons.star_rounded,
+                                color: Colors.white, size: 24),
                             const SizedBox(width: 12),
                             const Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Upgrade to Premium',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Unlock all sessions & features',
-                                    style: TextStyle(color: Colors.white70, fontSize: 12),
-                                  ),
+                                  Text('Upgrade to Premium',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15)),
+                                  Text('Unlock all sessions & features',
+                                      style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 12)),
                                 ],
                               ),
                             ),
@@ -194,7 +207,7 @@ class ProfileScreen extends StatelessWidget {
 
           const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
-          // ── Recent moods ──────────────────────────────────────────────
+          // ── Mood History ──────────────────────────────────────────────
           if (state.moodHistory.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
@@ -250,6 +263,8 @@ class ProfileScreen extends StatelessWidget {
                   _SettingsTile(emoji: '🌙', label: 'Dark Mode', delay: 530),
                   _SettingsTile(emoji: '🔒', label: 'Privacy', delay: 570),
                   _SettingsTile(emoji: '💬', label: 'Help & Support', delay: 610),
+                  // Sign Out tile — red styled
+                  _SignOutTile(),
                 ],
               ),
             ),
@@ -261,6 +276,8 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 }
+
+// ── Settings Tile ─────────────────────────────────────────────────────────────
 
 class _SettingsTile extends StatelessWidget {
   final String emoji;
@@ -295,10 +312,9 @@ class _SettingsTile extends StatelessWidget {
                 Text(emoji, style: const TextStyle(fontSize: 20)),
                 const SizedBox(width: 14),
                 Expanded(
-                  child: Text(
-                    label,
-                    style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15),
-                  ),
+                  child: Text(label,
+                      style: const TextStyle(
+                          color: AppTheme.textPrimary, fontSize: 15)),
                 ),
                 const Icon(Icons.arrow_forward_ios_rounded,
                     color: AppTheme.textMuted, size: 14),
@@ -308,5 +324,83 @@ class _SettingsTile extends StatelessWidget {
         ),
       ),
     ).animate(delay: Duration(milliseconds: delay)).fadeIn().slideX(begin: 0.05);
+  }
+}
+
+// ── Sign Out Tile ─────────────────────────────────────────────────────────────
+
+class _SignOutTile extends StatelessWidget {
+  const _SignOutTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.rose.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.rose.withOpacity(0.25)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () async {
+            // Show confirmation dialog
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (_) => AlertDialog(
+                backgroundColor: AppTheme.cardSurface,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+                title: const Text('Sign Out',
+                    style: TextStyle(color: AppTheme.textPrimary)),
+                content: const Text(
+                    'Are you sure you want to sign out?',
+                    style: TextStyle(color: AppTheme.textSecondary)),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel',
+                        style: TextStyle(color: AppTheme.textSecondary)),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Sign Out',
+                        style: TextStyle(
+                            color: AppTheme.rose,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            );
+
+            if (confirm == true) {
+              await AuthService().signOut();
+              // AuthWrapper automatically navigates to login
+            }
+          },
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Text('🚪', style: TextStyle(fontSize: 20)),
+                SizedBox(width: 14),
+                Expanded(
+                  child: Text('Sign Out',
+                      style: TextStyle(
+                          color: AppTheme.rose,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500)),
+                ),
+                Icon(Icons.arrow_forward_ios_rounded,
+                    color: AppTheme.rose, size: 14),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ).animate(delay: const Duration(milliseconds: 650)).fadeIn().slideX(begin: 0.05);
   }
 }
