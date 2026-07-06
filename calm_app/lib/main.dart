@@ -15,7 +15,17 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+  options: const FirebaseOptions(
+    apiKey: "AIzaSyBssMV92Za9cwwftslTiFbgH1st5sJIlZQ",
+    authDomain: "tranqlo-15c91.firebaseapp.com",
+    projectId: "tranqlo-15c91",
+    storageBucket: "tranqlo-15c91.firebasestorage.app",
+    messagingSenderId: "480797521658",
+    appId: "1:480797521658:web:cb7c930821600f40c37b43",
+    measurementId: "G-W8VV1JFRXT",
+  ),
+);
 
   timeDilation = 1.0;
 

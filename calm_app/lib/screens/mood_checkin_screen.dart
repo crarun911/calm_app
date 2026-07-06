@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_theme.dart';
 import '../models/app_state.dart';
-import 'recommendation_screen.dart';
 
 class MoodCheckInScreen extends StatefulWidget {
   const MoodCheckInScreen({super.key});
@@ -52,7 +51,7 @@ class _MoodCheckInScreenState extends State<MoodCheckInScreen> {
               const SizedBox(height: 40),
 
               Text(
-                'Session\nComplete ✨',
+                'How are you\nfeeling? ✨',
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                       height: 1.15,
                     ),
@@ -61,7 +60,7 @@ class _MoodCheckInScreenState extends State<MoodCheckInScreen> {
               const SizedBox(height: 12),
 
               Text(
-                'How are you feeling right now?',
+                'Select your current mood',
                 style: Theme.of(context).textTheme.bodyLarge,
               ).animate().fadeIn(delay: 200.ms),
 
@@ -115,14 +114,20 @@ class _MoodCheckInScreenState extends State<MoodCheckInScreen> {
                           Text(
                             mood.label,
                             style: TextStyle(
-                              color: isSelected ? mood.color : AppTheme.textSecondary,
+                              color: isSelected
+                                  ? mood.color
+                                  : AppTheme.textSecondary,
                               fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
                             ),
                           ),
                         ],
                       ),
-                    ).animate(delay: Duration(milliseconds: 300 + e.key * 60))
+                    ).animate(
+                            delay: Duration(
+                                milliseconds: 300 + e.key * 60))
                         .fadeIn()
                         .scale(begin: const Offset(0.8, 0.8)),
                   );
@@ -141,11 +146,14 @@ class _MoodCheckInScreenState extends State<MoodCheckInScreen> {
                     border: Border.all(color: AppTheme.divider),
                   ),
                   child: TextField(
-                    style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                    style: const TextStyle(
+                        color: AppTheme.textPrimary, fontSize: 14),
                     maxLines: 3,
                     decoration: const InputDecoration(
-                      hintText: 'Add a note about how you\'re feeling... (optional)',
-                      hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+                      hintText:
+                          'Add a note about how you\'re feeling... (optional)',
+                      hintStyle: TextStyle(
+                          color: AppTheme.textMuted, fontSize: 14),
                       border: InputBorder.none,
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
@@ -157,7 +165,7 @@ class _MoodCheckInScreenState extends State<MoodCheckInScreen> {
 
               const SizedBox(height: 20),
 
-              // ── Save Button ──────────────────────────────────────────────
+              // ── Save Button — navigates to HOME ──────────────────────────
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -169,21 +177,20 @@ class _MoodCheckInScreenState extends State<MoodCheckInScreen> {
                         ? null
                         : () {
                             context.read<AppState>().setMood(_selected!);
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const RecommendationScreen()),
-                            );
+                            // Pop all routes back to home (index 0)
+                            Navigator.of(context)
+                                .popUntil((route) => route.isFirst);
                           },
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: AppTheme.sageGradient,
                         borderRadius: BorderRadius.circular(18),
-                        boxShadow: _selected != null ? AppTheme.glowSage : null,
+                        boxShadow:
+                            _selected != null ? AppTheme.glowSage : null,
                       ),
                       child: const Center(
                         child: Text(
-                          'Save & Continue',
+                          'Save & Go Home',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -198,16 +205,15 @@ class _MoodCheckInScreenState extends State<MoodCheckInScreen> {
 
               const SizedBox(height: 16),
 
-              // Skip
+              // ── Skip — also goes home ────────────────────────────────────
               Center(
                 child: GestureDetector(
-                  onTap: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const RecommendationScreen()),
-                  ),
+                  onTap: () => Navigator.of(context)
+                      .popUntil((route) => route.isFirst),
                   child: const Text(
                     'Skip for now',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                    style: TextStyle(
+                        color: AppTheme.textSecondary, fontSize: 14),
                   ),
                 ),
               ),

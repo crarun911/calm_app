@@ -1,11 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../models/app_state.dart';
 import '../services/auth_service.dart';
-import '../screens/main_shell.dart';
-import '../screens/login_screen.dart';
+import 'main_shell.dart';
+import 'login_screen.dart';
 
-// This widget listens to auth state and shows
-// either the app or login screen automatically
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -29,8 +29,14 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        // Logged in → show app
+        // Logged in → load stats then show app
         if (snapshot.hasData && snapshot.data != null) {
+          // Load user stats from Firestore when user logs in
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final appState = context.read<AppState>();
+            appState.loadUserStats();
+            appState.listenToUserStats();
+          });
           return const MainShell();
         }
 

@@ -47,36 +47,33 @@ class RecommendationScreen extends StatelessWidget {
                 height: size,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.15 + (i % 4) * 0.1),
+                  color: Colors.white
+                      .withOpacity(0.15 + (i % 4) * 0.1),
                 ),
               ),
             );
           }),
 
           SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: AppTheme.cardSurface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.divider),
-                          ),
-                          child: const Icon(Icons.arrow_back_ios_new_rounded,
-                              color: AppTheme.textPrimary, size: 16),
-                        ),
+                  // ── Back button ──────────────────────────────────────
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppTheme.cardSurface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.divider),
                       ),
-                    ],
+                      child: const Icon(Icons.arrow_back_ios_new_rounded,
+                          color: AppTheme.textPrimary, size: 16),
+                    ),
                   ),
 
                   const SizedBox(height: 36),
@@ -95,10 +92,11 @@ class RecommendationScreen extends StatelessWidget {
 
                   const SizedBox(height: 40),
 
-                  // ── Sleep Card ──────────────────────────────────────────
+                  // ── Sleep Card ───────────────────────────────────────
                   _RecommendCard(
                     title: 'Sleep Better Tonight',
-                    subtitle: 'Wind down with soothing sleep stories and soundscapes',
+                    subtitle:
+                        'Wind down with soothing sleep stories and soundscapes',
                     emoji: '🌙',
                     gradient: AppTheme.sleepGradient,
                     accentColor: AppTheme.lavender,
@@ -107,11 +105,13 @@ class RecommendationScreen extends StatelessWidget {
                       context,
                       PageRouteBuilder(
                         pageBuilder: (_, __, ___) => const SleepScreen(),
-                        transitionsBuilder: (_, anim, __, child) => SlideTransition(
+                        transitionsBuilder: (_, anim, __, child) =>
+                            SlideTransition(
                           position: Tween(
                             begin: const Offset(-1, 0),
                             end: Offset.zero,
-                          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+                          ).animate(CurvedAnimation(
+                              parent: anim, curve: Curves.easeOutCubic)),
                           child: child,
                         ),
                       ),
@@ -120,10 +120,11 @@ class RecommendationScreen extends StatelessWidget {
 
                   const SizedBox(height: 16),
 
-                  // ── Meditate Card ───────────────────────────────────────
+                  // ── Meditate Card ────────────────────────────────────
                   _RecommendCard(
                     title: 'Reduce Anxiety',
-                    subtitle: 'Guided meditations to calm your nervous system',
+                    subtitle:
+                        'Guided meditations to calm your nervous system',
                     emoji: '🧘',
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
@@ -136,11 +137,13 @@ class RecommendationScreen extends StatelessWidget {
                       context,
                       PageRouteBuilder(
                         pageBuilder: (_, __, ___) => const MeditateScreen(),
-                        transitionsBuilder: (_, anim, __, child) => SlideTransition(
+                        transitionsBuilder: (_, anim, __, child) =>
+                            SlideTransition(
                           position: Tween(
                             begin: const Offset(1, 0),
                             end: Offset.zero,
-                          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+                          ).animate(CurvedAnimation(
+                              parent: anim, curve: Curves.easeOutCubic)),
                           child: child,
                         ),
                       ),
@@ -149,34 +152,38 @@ class RecommendationScreen extends StatelessWidget {
 
                   const SizedBox(height: 16),
 
-                  // ── Morning Energy Card ──────────────────────────────────
+                  // ── Morning Energy Card ──────────────────────────────
                   _RecommendCard(
                     title: 'Morning Energy',
-                    subtitle: 'Start your day with clarity and intention',
+                    subtitle:
+                        'Start your day with clarity and intention',
                     emoji: '☀️',
                     gradient: AppTheme.goldGradient,
                     accentColor: AppTheme.gold,
                     tags: ['Energise', 'Focus', '5–15 min'],
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const MeditateScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const MeditateScreen()),
                     ),
                   ).animate().fadeIn(delay: 550.ms).slideX(begin: -0.05),
 
-                  const Spacer(),
+                  const SizedBox(height: 32),
 
-                  // ── Back home ───────────────────────────────────────────
+                  // ── Return home ──────────────────────────────────────
                   Center(
                     child: GestureDetector(
-                      onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
+                      onTap: () => Navigator.of(context)
+                          .popUntil((route) => route.isFirst),
                       child: const Text(
                         'Return to Home',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                        style: TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 14),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -211,6 +218,7 @@ class _RecommendCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: gradient,
@@ -231,6 +239,7 @@ class _RecommendCard extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     title,
@@ -251,17 +260,20 @@ class _RecommendCard extends StatelessWidget {
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 6,
+                    runSpacing: 6,
                     children: tags
                         .map(
                           (t) => Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               t,
-                              style: const TextStyle(color: Colors.white70, fontSize: 10),
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 10),
                             ),
                           ),
                         )
@@ -270,7 +282,8 @@ class _RecommendCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios_rounded, color: accentColor, size: 16),
+            Icon(Icons.arrow_forward_ios_rounded,
+                color: accentColor, size: 16),
           ],
         ),
       ),

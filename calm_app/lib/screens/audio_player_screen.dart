@@ -190,10 +190,10 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
     }
   }
 
-  void _onSessionComplete() {
+  void _onSessionComplete() async {
     _clearSleepTimer();
     _audioPlayer.setVolume(1.0);
-    context.read<AppState>().completeSession();
+   await context.read<AppState>().completeSession();
     widget.onComplete?.call();
   }
 
@@ -389,14 +389,17 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
                             children: [
                               ...List.generate(6, (i) {
                                 final angle = i * math.pi / 3;
+                                const radius = 68.0;
+                                const dotSize = 28.0;
+                                const center = 110.0;
                                 return Positioned(
-                                  left: 110 + math.cos(angle) * 60,
-                                  top: 110 + math.sin(angle) * 60,
+                                  left: center + math.cos(angle) * radius - dotSize / 2,
+                                  top: center + math.sin(angle) * radius - dotSize / 2,
                                   child: Container(
-                                    width: 30, height: 30,
+                                    width: dotSize, height: dotSize,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: Colors.white.withOpacity(0.05),
+                                      color: Colors.white.withOpacity(0.07),
                                     ),
                                   ),
                                 );

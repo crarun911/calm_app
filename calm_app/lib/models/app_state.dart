@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../services/user_service.dart';
 
 enum MoodType { great, good, okay, sad, stressed }
 
@@ -33,21 +34,63 @@ class Session {
 }
 
 class AppState extends ChangeNotifier {
+  final _userService = UserService();
+
   int _currentNavIndex = 0;
   MoodType? _selectedMood;
   bool _isPlaying = false;
-  int _streakDays = 7;
-  int _minutesMeditated = 142;
+  int _streakDays = 0;
+  int _minutesMeditated = 0;
+  int _totalSessions = 0;
   List<MoodEntry> _moodHistory = [];
   Session? _currentSession;
+  List<bool> _weeklyStreak = List.filled(7, false);
+  bool _isLoading = false;
 
   int get currentNavIndex => _currentNavIndex;
   MoodType? get selectedMood => _selectedMood;
   bool get isPlaying => _isPlaying;
   int get streakDays => _streakDays;
   int get minutesMeditated => _minutesMeditated;
+  int get totalSessions => _totalSessions;
   List<MoodEntry> get moodHistory => _moodHistory;
   Session? get currentSession => _currentSession;
+  List<bool> get weeklyStreak => _weeklyStreak;
+  bool get isLoading => _isLoading;
+
+  // ── Load stats from Firestore ─────────────────────────────────────────────
+
+  Future<void> loadUserStats() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _userService.initializeUser();
+      final stats = await _userService.getUserStats();
+
+      _streakDays = stats['streakDays'] ?? 0;
+      _minutesMeditated = stats['minutesMeditated'] ?? 0;
+      _totalSessions = stats['totalSessions'] ?? 0;
+      _weeklyStreak = await _userService.getWeeklyStreak();
+    } catch (e) {
+      debugPrint('Error loading stats: $e');
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  // ── Listen to real-time updates ───────────────────────────────────────────
+
+  void listenToUserStats() {
+    _userService.userStatsStream().listen((stats) {
+      if (stats.isEmpty) return;
+      _streakDays = stats['streakDays'] ?? 0;
+      _minutesMeditated = stats['minutesMeditated'] ?? 0;
+      _totalSessions = stats['totalSessions'] ?? 0;
+      notifyListeners();
+    });
+  }
 
   void setNavIndex(int index) {
     _currentNavIndex = index;
@@ -71,14 +114,23 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void completeSession() {
+  // ── Complete session — saves to Firestore ─────────────────────────────────
+
+  Future<void> completeSession() async {
     _isPlaying = false;
-    _minutesMeditated += _currentSession?.durationMin ?? 10;
+    final minutes = _currentSession?.durationMin ?? 10;
+
+    // Save to Firestore — this updates streak + minutes automatically
+    await _userService.completeSession(minutes);
+
+    // Refresh weekly streak dots
+    _weeklyStreak = await _userService.getWeeklyStreak();
+
     notifyListeners();
   }
 }
 
-// ── Data ──────────────────────────────────────────────────────────────────────
+// ── Session Data ──────────────────────────────────────────────────────────────
 
 const dailyCalmSession = Session(
   id: 'daily_calm',
