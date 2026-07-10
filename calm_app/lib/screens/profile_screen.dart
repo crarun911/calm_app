@@ -6,18 +6,26 @@ import '../theme/app_theme.dart';
 import '../models/app_state.dart';
 import '../widgets/common_widgets.dart';
 import '../services/auth_service.dart';
+import 'reminder_screen.dart';
+import 'activity_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   String _moodEmoji(MoodType? mood) {
     switch (mood) {
-      case MoodType.great: return '😁';
-      case MoodType.good: return '🙂';
-      case MoodType.okay: return '😐';
-      case MoodType.sad: return '😔';
-      case MoodType.stressed: return '😣';
-      default: return '—';
+      case MoodType.great:
+        return '😁';
+      case MoodType.good:
+        return '🙂';
+      case MoodType.okay:
+        return '😐';
+      case MoodType.sad:
+        return '😔';
+      case MoodType.stressed:
+        return '😣';
+      default:
+        return '—';
     }
   }
 
@@ -41,7 +49,7 @@ class ProfileScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                 child: Column(
                   children: [
-                    // Avatar with initial
+                    // Avatar
                     Stack(
                       children: [
                         Container(
@@ -72,20 +80,21 @@ class ProfileScreen extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppTheme.gold,
                               shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: AppTheme.midnight, width: 2),
+                              border:
+                                  Border.all(color: AppTheme.midnight, width: 2),
                             ),
                             child: const Icon(Icons.edit_rounded,
                                 color: Colors.white, size: 14),
                           ),
                         ),
                       ],
-                    ).animate().fadeIn(delay: 100.ms)
+                    )
+                        .animate()
+                        .fadeIn(delay: 100.ms)
                         .scale(begin: const Offset(0.8, 0.8)),
 
                     const SizedBox(height: 16),
 
-                    // Name from Firebase
                     Text(
                       name,
                       style: Theme.of(context).textTheme.headlineLarge,
@@ -93,7 +102,6 @@ class ProfileScreen extends StatelessWidget {
 
                     const SizedBox(height: 4),
 
-                    // Email from Firebase
                     Text(
                       email,
                       style: const TextStyle(
@@ -129,8 +137,7 @@ class ProfileScreen extends StatelessWidget {
                                           fontSize: 15)),
                                   Text('Unlock all sessions & features',
                                       style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 12)),
+                                          color: Colors.white70, fontSize: 12)),
                                 ],
                               ),
                             ),
@@ -183,7 +190,7 @@ class ProfileScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: StatChip(
-                          value: '24',
+                          value: '${state.totalSessions}',
                           label: 'Sessions Done',
                           icon: Icons.check_circle_outline_rounded,
                           color: AppTheme.lavender,
@@ -258,13 +265,52 @@ class ProfileScreen extends StatelessWidget {
                 children: [
                   const SectionHeader(title: 'Settings'),
                   const SizedBox(height: 14),
-                  _SettingsTile(emoji: '🔔', label: 'Reminders', delay: 450),
-                  _SettingsTile(emoji: '🎵', label: 'Audio Quality', delay: 490),
-                  _SettingsTile(emoji: '🌙', label: 'Dark Mode', delay: 530),
-                  _SettingsTile(emoji: '🔒', label: 'Privacy', delay: 570),
-                  _SettingsTile(emoji: '💬', label: 'Help & Support', delay: 610),
-                  // Sign Out tile — red styled
-                  _SignOutTile(),
+                  _SettingsTile(
+                    emoji: '🔔',
+                    label: 'Reminders',
+                    delay: 450,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ReminderScreen()),
+                    ),
+                  ),
+                  _SettingsTile(
+                    emoji: '📊',
+                    label: 'Activity',
+                    delay: 490,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ActivityScreen()),
+                    ),
+                  ),
+                  _SettingsTile(
+                    emoji: '🎵',
+                    label: 'Audio Quality',
+                    delay: 530,
+                    onTap: () {},
+                  ),
+                  _SettingsTile(
+                    emoji: '🌙',
+                    label: 'Dark Mode',
+                    delay: 570,
+                    onTap: () {},
+                  ),
+                  _SettingsTile(
+                    emoji: '🔒',
+                    label: 'Privacy',
+                    delay: 610,
+                    onTap: () {},
+                  ),
+                  _SettingsTile(
+                    emoji: '💬',
+                    label: 'Help & Support',
+                    delay: 650,
+                    onTap: () {},
+                  ),
+                  // Sign Out
+                  const _SignOutTile(),
                 ],
               ),
             ),
@@ -283,11 +329,13 @@ class _SettingsTile extends StatelessWidget {
   final String emoji;
   final String label;
   final int delay;
+  final VoidCallback onTap;
 
   const _SettingsTile({
     required this.emoji,
     required this.label,
     required this.delay,
+    required this.onTap,
   });
 
   @override
@@ -304,9 +352,10 @@ class _SettingsTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
-          onTap: () {},
+          onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
                 Text(emoji, style: const TextStyle(fontSize: 20)),
@@ -323,7 +372,10 @@ class _SettingsTile extends StatelessWidget {
           ),
         ),
       ),
-    ).animate(delay: Duration(milliseconds: delay)).fadeIn().slideX(begin: 0.05);
+    )
+        .animate(delay: Duration(milliseconds: delay))
+        .fadeIn()
+        .slideX(begin: 0.05);
   }
 }
 
@@ -347,7 +399,6 @@ class _SignOutTile extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: () async {
-            // Show confirmation dialog
             final confirm = await showDialog<bool>(
               context: context,
               builder: (_) => AlertDialog(
@@ -356,14 +407,14 @@ class _SignOutTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20)),
                 title: const Text('Sign Out',
                     style: TextStyle(color: AppTheme.textPrimary)),
-                content: const Text(
-                    'Are you sure you want to sign out?',
+                content: const Text('Are you sure you want to sign out?',
                     style: TextStyle(color: AppTheme.textSecondary)),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
                     child: const Text('Cancel',
-                        style: TextStyle(color: AppTheme.textSecondary)),
+                        style:
+                            TextStyle(color: AppTheme.textSecondary)),
                   ),
                   TextButton(
                     onPressed: () => Navigator.pop(context, true),
@@ -375,10 +426,8 @@ class _SignOutTile extends StatelessWidget {
                 ],
               ),
             );
-
             if (confirm == true) {
               await AuthService().signOut();
-              // AuthWrapper automatically navigates to login
             }
           },
           child: const Padding(
@@ -401,6 +450,9 @@ class _SignOutTile extends StatelessWidget {
           ),
         ),
       ),
-    ).animate(delay: const Duration(milliseconds: 650)).fadeIn().slideX(begin: 0.05);
+    )
+        .animate(delay: const Duration(milliseconds: 700))
+        .fadeIn()
+        .slideX(begin: 0.05);
   }
 }

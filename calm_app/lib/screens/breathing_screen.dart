@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_theme.dart';
+import 'guided_belly_breathing_screen.dart';
 
 // ── Data Model ────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ class BreathingTechnique {
 class BreathPhaseConfig {
   final String label;
   final int seconds;
-  final bool expand; // true = expand circle, false = shrink
+  final bool expand;
 
   const BreathPhaseConfig({
     required this.label,
@@ -338,7 +339,6 @@ class _BreathingScreenState extends State<BreathingScreen> {
         onBack: () => setState(() => _selected = null),
       );
     }
-
     return _TechniqueList(
       onSelect: (t) => setState(() => _selected = t),
     );
@@ -367,14 +367,18 @@ class _TechniqueList extends StatelessWidget {
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: Container(
-                        width: 40, height: 40,
+                        width: 40,
+                        height: 40,
                         decoration: BoxDecoration(
                           color: AppTheme.cardSurface,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: AppTheme.divider),
                         ),
-                        child: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: AppTheme.textPrimary, size: 16),
+                        child: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: AppTheme.textPrimary,
+                          size: 16,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -407,11 +411,11 @@ class _TechniqueList extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: AppTheme.glowSage,
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    const Text('🌬️', style: TextStyle(fontSize: 40)),
-                    const SizedBox(width: 16),
-                    const Expanded(
+                    Text('🌬️', style: TextStyle(fontSize: 40)),
+                    SizedBox(width: 16),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -423,8 +427,8 @@ class _TechniqueList extends StatelessWidget {
                           SizedBox(height: 4),
                           Text(
                             'Choose a technique and follow the animated guide',
-                            style: TextStyle(
-                                color: Colors.white70, fontSize: 12),
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 12),
                           ),
                         ],
                       ),
@@ -437,16 +441,63 @@ class _TechniqueList extends StatelessWidget {
 
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
+          // Guided badge for belly breathing
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.sage.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: AppTheme.sage.withOpacity(0.3)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.record_voice_over_rounded,
+                        color: AppTheme.sage, size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      'Belly Breathing has a full guided 8-minute session',
+                      style: TextStyle(
+                          color: AppTheme.sageLight, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn(delay: 150.ms),
+            ),
+          ),
+
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (ctx, i) {
                 final t = breathingTechniques[i];
+                final isGuided = t.id == 'diaphragmatic';
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
                   child: _TechniqueCard(
                     technique: t,
-                    onTap: () => onSelect(t),
-                  ).animate(delay: Duration(milliseconds: 150 + i * 60))
+                    isGuided: isGuided,
+                    onTap: () {
+                      if (isGuided) {
+                        // Belly Breathing → full guided session
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const GuidedBellyBreathingScreen(),
+                          ),
+                        );
+                      } else {
+                        // All others → standard player
+                        onSelect(t);
+                      }
+                    },
+                  )
+                      .animate(
+                          delay: Duration(milliseconds: 150 + i * 60))
                       .fadeIn()
                       .slideY(begin: 0.05),
                 );
@@ -466,8 +517,14 @@ class _TechniqueList extends StatelessWidget {
 
 class _TechniqueCard extends StatelessWidget {
   final BreathingTechnique technique;
+  final bool isGuided;
   final VoidCallback onTap;
-  const _TechniqueCard({required this.technique, required this.onTap});
+
+  const _TechniqueCard({
+    required this.technique,
+    required this.isGuided,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -478,13 +535,18 @@ class _TechniqueCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.cardSurface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTheme.divider),
+          border: Border.all(
+            color: isGuided
+                ? AppTheme.sage.withOpacity(0.4)
+                : AppTheme.divider,
+          ),
         ),
         child: Row(
           children: [
             // Emoji circle
             Container(
-              width: 52, height: 52,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
                 color: technique.color.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(14),
@@ -499,11 +561,32 @@ class _TechniqueCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(technique.name,
-                      style: const TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600)),
+                  Row(
+                    children: [
+                      Text(technique.name,
+                          style: const TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600)),
+                      if (isGuided) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.sage.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text('GUIDED',
+                              style: TextStyle(
+                                  color: AppTheme.sage,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5)),
+                        ),
+                      ],
+                    ],
+                  ),
                   const SizedBox(height: 2),
                   Text(technique.subtitle,
                       style: TextStyle(
@@ -521,19 +604,19 @@ class _TechniqueCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Phase timing badges
+            // Phase timing / guided icon
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: technique.color.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '${technique.phases.length} phases',
+                    isGuided ? '8 min' : '${technique.phases.length} phases',
                     style: TextStyle(
                         color: technique.color,
                         fontSize: 10,
@@ -542,9 +625,9 @@ class _TechniqueCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  technique.phases
-                      .map((p) => '${p.seconds}s')
-                      .join('-'),
+                  isGuided
+                      ? 'guided'
+                      : technique.phases.map((p) => '${p.seconds}s').join('-'),
                   style: const TextStyle(
                       color: AppTheme.textMuted, fontSize: 10),
                 ),
@@ -562,8 +645,7 @@ class _TechniqueCard extends StatelessWidget {
 class _BreathingPlayer extends StatefulWidget {
   final BreathingTechnique technique;
   final VoidCallback onBack;
-  const _BreathingPlayer(
-      {required this.technique, required this.onBack});
+  const _BreathingPlayer({required this.technique, required this.onBack});
 
   @override
   State<_BreathingPlayer> createState() => _BreathingPlayerState();
@@ -624,14 +706,15 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
   void _runPhase() {
     final phase = _currentPhase;
     final duration = phase.seconds;
-
     setState(() => _countdown = duration);
 
     _controller.duration = Duration(seconds: duration);
     if (phase.expand) {
-      _controller.forward(from: _controller.value < 0.5 ? 0 : _controller.value);
+      _controller.forward(
+          from: _controller.value < 0.5 ? 0 : _controller.value);
     } else {
-      _controller.reverse(from: _controller.value > 0.5 ? 1 : _controller.value);
+      _controller.reverse(
+          from: _controller.value > 0.5 ? 1 : _controller.value);
     }
 
     int remaining = duration;
@@ -665,8 +748,8 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppTheme.cardSurface,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Session Complete! 🎉',
             style: TextStyle(color: AppTheme.textPrimary)),
         content: Text(
@@ -704,7 +787,7 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
       body: SafeArea(
         child: Column(
           children: [
-            // ── Top Bar ────────────────────────────────────────────────
+            // ── Top Bar ──────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
               child: Row(
@@ -726,8 +809,8 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                               fontSize: 16,
                               fontWeight: FontWeight.w600)),
                       Text(t.subtitle,
-                          style: TextStyle(
-                              color: t.color, fontSize: 11)),
+                          style:
+                              TextStyle(color: t.color, fontSize: 11)),
                     ],
                   ),
                   IconButton(
@@ -754,22 +837,19 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _InfoSection(
-                        title: 'Best For',
-                        content: t.bestFor,
-                        color: t.color,
-                      ),
+                          title: 'Best For',
+                          content: t.bestFor,
+                          color: t.color),
                       const SizedBox(height: 16),
                       _InfoSection(
-                        title: 'How To Do It',
-                        steps: t.steps,
-                        color: t.color,
-                      ),
+                          title: 'How To Do It',
+                          steps: t.steps,
+                          color: t.color),
                       const SizedBox(height: 16),
                       _InfoSection(
-                        title: 'Benefits',
-                        bullets: t.benefits,
-                        color: t.color,
-                      ),
+                          title: 'Benefits',
+                          bullets: t.benefits,
+                          color: t.color),
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
@@ -802,24 +882,19 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                 ),
               )
             else ...[
-              // ── Cycle counter ─────────────────────────────────────
+              // ── Cycle counter ────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Cycle $_cycleCount / ${t.recommendedCycles}',
-                      style: TextStyle(
-                          color: t.color,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500),
-                    ),
-                  ],
+                child: Text(
+                  'Cycle $_cycleCount / ${t.recommendedCycles}',
+                  style: TextStyle(
+                      color: t.color,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500),
                 ),
               ),
 
-              // ── Animated Circle ───────────────────────────────────
+              // ── Animated Circle ──────────────────────────────────
               Expanded(
                 child: Center(
                   child: AnimatedBuilder(
@@ -829,24 +904,21 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                       return Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Outer glow rings
                           ...List.generate(3, (i) {
-                            final ringScale =
-                                scale + i * 0.12 + 0.05;
+                            final ringScale = scale + i * 0.12 + 0.05;
                             return Container(
                               width: 260 * ringScale,
                               height: 260 * ringScale,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: t.color.withOpacity(
-                                      0.08 - i * 0.02),
+                                  color: t.color
+                                      .withOpacity(0.08 - i * 0.02),
                                   width: 1,
                                 ),
                               ),
                             );
                           }),
-                          // Main circle
                           Container(
                             width: 220 * scale,
                             height: 220 * scale,
@@ -860,9 +932,8 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                                 ],
                               ),
                               border: Border.all(
-                                color: t.color.withOpacity(0.6),
-                                width: 2,
-                              ),
+                                  color: t.color.withOpacity(0.6),
+                                  width: 2),
                               boxShadow: [
                                 BoxShadow(
                                   color: t.color.withOpacity(0.25),
@@ -872,16 +943,15 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                               ],
                             ),
                             child: Column(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(t.emoji,
-                                    style: const TextStyle(
-                                        fontSize: 32)),
+                                    style:
+                                        const TextStyle(fontSize: 32)),
                                 const SizedBox(height: 8),
                                 AnimatedSwitcher(
-                                  duration:
-                                      const Duration(milliseconds: 400),
+                                  duration: const Duration(
+                                      milliseconds: 400),
                                   child: Text(
                                     _isRunning
                                         ? _currentPhase.label
@@ -889,10 +959,9 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                                     key: ValueKey(
                                         '$_isRunning$_phaseIndex'),
                                     style: TextStyle(
-                                      color: t.color,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                        color: t.color,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500),
                                     textAlign: TextAlign.center,
                                   ),
                                 ),
@@ -905,10 +974,9 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                                       '$_countdown',
                                       key: ValueKey(_countdown),
                                       style: TextStyle(
-                                        color: t.color,
-                                        fontSize: 42,
-                                        fontWeight: FontWeight.w200,
-                                      ),
+                                          color: t.color,
+                                          fontSize: 42,
+                                          fontWeight: FontWeight.w200),
                                     ),
                                   ),
                                 ],
@@ -922,7 +990,7 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                 ),
               ),
 
-              // ── Phase indicators ──────────────────────────────────
+              // ── Phase indicators ─────────────────────────────────
               if (_isRunning)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -932,8 +1000,7 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                       final isActive = i == _phaseIndex;
                       return AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
-                        margin:
-                            const EdgeInsets.symmetric(horizontal: 4),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
                         width: isActive ? 24 : 8,
                         height: 8,
                         decoration: BoxDecoration(
@@ -945,10 +1012,10 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                   ),
                 ),
 
-              // ── Phase labels row ──────────────────────────────────
+              // ── Phase labels ─────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: t.phases
@@ -957,25 +1024,24 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                       .map((e) => _PhaseChip(
                             label: e.value.label,
                             seconds: e.value.seconds,
-                            isActive: _isRunning &&
-                                e.key == _phaseIndex,
+                            isActive: _isRunning && e.key == _phaseIndex,
                             color: t.color,
                           ))
                       .toList(),
                 ),
               ),
 
-              // ── Controls ──────────────────────────────────────────
+              // ── Controls ─────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Reset
                     GestureDetector(
                       onTap: _reset,
                       child: Container(
-                        width: 48, height: 48,
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
                           color: AppTheme.cardSurface,
                           borderRadius: BorderRadius.circular(14),
@@ -986,25 +1052,20 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                       ),
                     ),
                     const SizedBox(width: 20),
-                    // Play/Pause
                     GestureDetector(
                       onTap: _isRunning ? _pause : _start,
                       child: Container(
-                        width: 72, height: 72,
+                        width: 72,
+                        height: 72,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: LinearGradient(
-                            colors: [
-                              t.color,
-                              t.color.withOpacity(0.7)
-                            ],
-                          ),
+                              colors: [t.color, t.color.withOpacity(0.7)]),
                           boxShadow: [
                             BoxShadow(
-                              color: t.color.withOpacity(0.4),
-                              blurRadius: 20,
-                              spreadRadius: 4,
-                            ),
+                                color: t.color.withOpacity(0.4),
+                                blurRadius: 20,
+                                spreadRadius: 4),
                           ],
                         ),
                         child: Icon(
@@ -1017,12 +1078,12 @@ class _BreathingPlayerState extends State<_BreathingPlayer>
                       ),
                     ),
                     const SizedBox(width: 20),
-                    // Info
                     GestureDetector(
                       onTap: () =>
                           setState(() => _showInfo = !_showInfo),
                       child: Container(
-                        width: 48, height: 48,
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
                           color: AppTheme.cardSurface,
                           borderRadius: BorderRadius.circular(14),
@@ -1067,28 +1128,21 @@ class _PhaseChip extends StatelessWidget {
         color: isActive ? color.withOpacity(0.15) : AppTheme.cardSurface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: isActive ? color.withOpacity(0.4) : AppTheme.divider,
-        ),
+            color: isActive ? color.withOpacity(0.4) : AppTheme.divider),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? color : AppTheme.textSecondary,
-              fontSize: 10,
-              fontWeight:
-                  isActive ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-          Text(
-            '${seconds}s',
-            style: TextStyle(
-              color: isActive ? color : AppTheme.textMuted,
-              fontSize: 10,
-            ),
-          ),
+          Text(label,
+              style: TextStyle(
+                  color: isActive ? color : AppTheme.textSecondary,
+                  fontSize: 10,
+                  fontWeight:
+                      isActive ? FontWeight.w600 : FontWeight.w400)),
+          Text('${seconds}s',
+              style: TextStyle(
+                  color: isActive ? color : AppTheme.textMuted,
+                  fontSize: 10)),
         ],
       ),
     );
@@ -1124,20 +1178,19 @@ class _InfoSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: color,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-          ),
+          Text(title,
+              style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5)),
           const SizedBox(height: 10),
           if (content != null)
             Text(content!,
                 style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 13, height: 1.5)),
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                    height: 1.5)),
           if (steps != null)
             ...steps!.asMap().entries.map((e) => Padding(
                   padding: const EdgeInsets.only(bottom: 6),
@@ -1145,19 +1198,18 @@ class _InfoSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        width: 20, height: 20,
+                        width: 20,
+                        height: 20,
                         decoration: BoxDecoration(
                           color: color.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Center(
-                          child: Text(
-                            '${e.key + 1}',
-                            style: TextStyle(
-                                color: color,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700),
-                          ),
+                          child: Text('${e.key + 1}',
+                              style: TextStyle(
+                                  color: color,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700)),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -1179,11 +1231,10 @@ class _InfoSection extends StatelessWidget {
                     children: [
                       Container(
                         margin: const EdgeInsets.only(top: 5),
-                        width: 6, height: 6,
+                        width: 6,
+                        height: 6,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: color,
-                        ),
+                            shape: BoxShape.circle, color: color),
                       ),
                       const SizedBox(width: 10),
                       Expanded(

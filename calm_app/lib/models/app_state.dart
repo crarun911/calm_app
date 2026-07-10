@@ -116,12 +116,12 @@ class AppState extends ChangeNotifier {
 
   // ── Complete session — saves to Firestore ─────────────────────────────────
 
-  Future<void> completeSession() async {
+  Future<void> completeSession({String category = 'meditation'}) async {
     _isPlaying = false;
     final minutes = _currentSession?.durationMin ?? 10;
 
-    // Save to Firestore — this updates streak + minutes automatically
-    await _userService.completeSession(minutes);
+    // Save to Firestore with category
+    await _userService.completeSession(minutes, category: category);
 
     // Refresh weekly streak dots
     _weeklyStreak = await _userService.getWeeklyStreak();

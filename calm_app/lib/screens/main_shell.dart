@@ -6,6 +6,7 @@ import '../models/app_state.dart';
 import 'home_screen.dart';
 import 'meditate_screen.dart';
 import 'sleep_screen.dart';
+import 'activity_screen.dart';
 import 'mood_checkin_screen.dart';
 import 'profile_screen.dart';
 
@@ -16,6 +17,7 @@ class MainShell extends StatelessWidget {
     HomeScreen(),
     MeditateScreen(),
     SleepScreen(),
+    ActivityScreen(),
     MoodCheckInScreen(),
     ProfileScreen(),
   ];
@@ -71,18 +73,25 @@ class MainShell extends StatelessWidget {
                     onTap: () => state.setNavIndex(2),
                   ),
                   _NavItem(
-                    icon: Icons.mood_rounded,
-                    label: 'Mood',
+                    icon: Icons.bar_chart_rounded,
+                    label: 'Activity',
                     index: 3,
                     current: state.currentNavIndex,
                     onTap: () => state.setNavIndex(3),
                   ),
                   _NavItem(
-                    icon: Icons.person_rounded,
-                    label: 'Profile',
+                    icon: Icons.mood_rounded,
+                    label: 'Mood',
                     index: 4,
                     current: state.currentNavIndex,
                     onTap: () => state.setNavIndex(4),
+                  ),
+                  _NavItem(
+                    icon: Icons.person_rounded,
+                    label: 'Profile',
+                    index: 5,
+                    current: state.currentNavIndex,
+                    onTap: () => state.setNavIndex(5),
                   ),
                 ],
               ),
@@ -120,15 +129,17 @@ class _NavItem extends StatelessWidget {
       },
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: isActive ? AppTheme.sage.withOpacity(0.15) : Colors.transparent,
+                color: isActive
+                    ? AppTheme.sage.withOpacity(0.15)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(
@@ -142,8 +153,9 @@ class _NavItem extends StatelessWidget {
               label,
               style: TextStyle(
                 color: isActive ? AppTheme.sage : AppTheme.textMuted,
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                fontSize: 9,
+                fontWeight:
+                    isActive ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ],

@@ -3,7 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_theme.dart';
 import '../models/app_state.dart';
 import '../widgets/common_widgets.dart';
-import 'audio_player_screen.dart';
+import 'sleep_player_screen.dart';
 import 'mood_checkin_screen.dart';
 
 class SleepScreen extends StatelessWidget {
@@ -13,7 +13,7 @@ class SleepScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AudioPlayerScreen(
+        builder: (_) => SleepPlayerScreen(
           session: session,
           onComplete: () {
             Navigator.pop(context);
